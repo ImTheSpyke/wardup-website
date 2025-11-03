@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  wardup:
+    build: .
+    container_name: wardup
+    ports:
+      - "80:80"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=production
