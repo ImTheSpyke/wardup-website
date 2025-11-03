@@ -23,7 +23,6 @@ WORKDIR /app
 
 # Copy only what’s needed for runtime
 COPY --from=builder /app/package*.json ./
-RUN npm ci --omit=dev
 
 # Copy built files and static frontend
 COPY --from=builder /app/dist ./dist
