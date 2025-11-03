@@ -1,0 +1,484 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WardUp — Guess the Champion</title>
+  <style>
+
+
+    * {
+    box-sizing: border-box;
+    }
+    :root{
+      --bg:#0f1221;
+      --card:#0f1626;
+      --muted:#9aa3bf;
+      --accent:#ffe600;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);color:#eaf0ff;font-family:Inter,system-ui,Segoe UI,Arial;display:flex;align-items:center;justify-content:center}
+    .wrap{
+      width:100%;max-width:640px;padding:28px;
+    }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.04);
+      border-radius:12px;
+      padding:24px;
+      text-align:center;
+      box-shadow:0 12px 36px rgba(0,0,0,0.6);
+    }
+
+    .title{ font-weight:700; margin:0 0 10px; font-size:1.1rem; }
+    .hintline{ color:var(--muted); font-size:.92rem; margin-bottom:12px; }
+
+    .champ-img{
+      width:400px;
+      height: 400px;
+      border-radius:12px;
+      object-fit:contain;
+      margin:12px auto;
+    }
+
+    .word{
+      display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:16px 0;
+    }
+    .char{
+      min-width:26px;
+      height:26px;
+      display:flex;align-items:center;justify-content:center;border-radius:8px;
+      background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02);font-weight:700;font-size:18px;letter-spacing:2px;
+    }
+    .char.space{ background:transparent;border:0; min-width:8px;height:auto; }
+
+    .controls{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+    .btn {
+      padding:.55rem .85rem;border-radius:10px;border:0;font-weight:700;cursor:pointer;
+    }
+    .btn-primary{ background:var(--accent); color:#061024; }
+    .btn-ghost{ background:transparent;border:1px solid rgba(255,255,255,0.04); color:var(--muted); }
+
+    .input{
+      width:100%;max-width:420px;margin:10px auto 0;display:block;padding:.7rem .9rem;border-radius:10px;border:1px solid rgba(255,255,255,0.04);
+      background:rgba(255,255,255,0.01);color:inherit;font-size:1rem;
+    }
+
+    .status{ margin-top:12px;color:var(--muted);font-size:.95rem;min-height:22px; }
+
+    @media (max-width:520px){
+      .champ-img{ width:160px;height:160px; }
+      .char{ min-width:16px;height:40px;font-size:16px; }
+    }
+
+    /* small shake */
+    @keyframes shake { 0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)} }
+    .shake { animation:shake .26s linear; }
+
+
+
+
+
+
+
+/* Simple Discord-like toggle */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Track */
+.toggle .track {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  display: inline-block;
+  position: relative;
+  transition: background .15s ease, box-shadow .15s ease;
+}
+
+/* Knob */
+.toggle .knob {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.35);
+  transition: left .15s cubic-bezier(.2,.9,.3,1);
+}
+
+/* Label text */
+.toggle .label {
+  color: var(--muted, #9aa3bf);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Checked state */
+.toggle input:checked + .track {
+  background: linear-gradient(90deg, #6b8cff 0%, #8bd6ff 100%);
+}
+.toggle input:checked + .track .knob {
+  left: calc(100% - 4px - 16px);
+}
+
+/* Focus ring for keyboard users */
+.toggle input:focus + .track {
+  box-shadow: 0 0 0 5px rgba(107,140,255,0.12);
+}
+
+/* Small screens tweak */
+@media (max-width:480px) {
+  .toggle .track { width: 36px; height: 20px; }
+  .toggle .knob { width: 14px; height: 14px; left: 3px; }
+  .toggle input:checked + .track .knob { left: calc(100% - 3px - 14px); }
+  .toggle .label { font-size: 0.9rem; }
+}
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" role="main" aria-labelledby="title">
+      <div id="title" class="title">Guess the Champion</div>
+      <div class="hintline">Image in the center — type the name and press Guess (or Enter). Use Hint to reveal a letter.</div>
+
+      <img id="champImg" class="champ-img" src="" alt="champion">
+
+      <div id="word" class="word" aria-live="polite" aria-atomic="true"></div>
+
+      <input id="input" class="input" placeholder="Type champion name..." autocomplete="off" />
+
+      <div class="controls">
+        <label class="toggle" for="enableSkins">
+            <input id="enableSkins" type="checkbox" />
+            <span class="track"><span class="knob"></span></span>
+            <span class="label">Enable skins</span>
+        </label>
+        <label class="toggle" for="onlyUseCentered">
+            <input id="onlyUseCentered" type="checkbox" />
+            <span class="track"><span class="knob"></span></span>
+            <span class="label">Only use centered images</span>
+        </label><br>
+        <button id="hint" class="btn btn-ghost" type="button">Hint</button>
+        <button id="guess" class="btn btn-primary" type="button">Guess</button>
+        <button id="next" class="btn btn-ghost" type="button">Next</button>
+      </div>
+
+      <div id="status" class="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- Utility (pure JS, no external deps) ---
+    const el = id => document.getElementById(id);
+    const champImg = el('champImg');
+    const wordWrap = el('word');
+    const input = el('input');
+    const hintBtn = el('hint');
+    const guessBtn = el('guess');
+    const nextBtn = el('next');
+    const status = el('status');
+    const enableSkins = el('enableSkins');
+    const onlyUseCentered = el('onlyUseCentered');
+
+
+    const TEMP = {
+        championList: []
+    }
+
+
+    async function getAllSkinsOfChampion(champion) {
+        // configuration
+        const base = 'https://leagueoflegends.game.cdn.pog-group.com/ddragon/versions/15.18.1/img/champion';
+        const timeoutMs = 500;
+        const maxSkins = 100;
+
+        // helper: fetch HEAD with timeout (returns Response or throws)
+        async function headWithTimeout(url, ms) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), ms);
+            try {
+            const res = await fetch(url, { method: 'HEAD', signal: controller.signal });
+            return res;
+            } finally {
+            clearTimeout(timer);
+            }
+        }
+
+        // build promises 1..maxSkins
+        const promises = Array.from({ length: maxSkins }, (_, idx) => {
+            const i = idx + 1;
+            const centeredUrl = `${base}/centered/${champion.id}_${i}.jpg`;
+
+            return (async () => {
+            try {
+                const res = await headWithTimeout(centeredUrl, timeoutMs);
+                if (res && res.status === 200) return i;
+            } catch (err) {
+                // timeout or network error -> treat as missing
+            }
+            return null;
+            })();
+        });
+
+        const results = await Promise.all(promises);
+        const list = results.filter(x => x != null).map(Number);
+
+        console.log(`Found skins for ${champion.name}: ${list}`);
+
+        return list.map(i => {
+
+            if(onlyUseCentered.checked == true) {
+                return `${base}/centered/${champion.id}_${i}.jpg`
+            } else {
+                return [
+                    `${base}/centered/${champion.id}_${i}.jpg`,
+                    `${base}/splash/${champion.id}_${i}.jpg`,
+                    `${base}/tiles/${champion.id}_${i}.jpg`,
+                    `${base}/loading/${champion.id}_${i}.jpg`
+                ]
+            }
+        }).flat();
+    }
+
+
+
+    async function getRandomChampionImage(key) {
+        let champ = TEMP.championList.find(c => c.key === key)
+
+        let list = [
+            `https://leagueoflegends.game.cdn.pog-group.com/ddragon/versions/15.18.1/img/champion/centered/${champ.id}_0.jpg`,
+        ]
+        if(onlyUseCentered.checked == false) {
+            list = list.concat([
+                `https://leagueoflegends.game.cdn.pog-group.com/ddragon/versions/15.18.1/img/champion/splash/${champ.id}_0.jpg`,
+                `https://leagueoflegends.game.cdn.pog-group.com/ddragon/versions/15.18.1/img/champion/tiles/${champ.id}_0.jpg`,
+                `https://leagueoflegends.game.cdn.pog-group.com/ddragon/versions/15.18.1/img/champion/loading/${champ.id}_0.jpg`
+            ])
+        }
+
+
+        if(enableSkins.checked == false) {
+            return list
+        }
+
+        let allSkins = await getAllSkinsOfChampion(champ)
+        
+        return list.concat(allSkins)
+        
+    }
+
+    async function refreshChampionList() {
+        let championsJSON = (await (await fetch("https://leagueoflegends.game.cdn.pog-group.com/ddragon/versions/15.2.1/15.2.1/data/fr_FR/champion.json")).json()).data
+        
+        let list = Object.values(championsJSON).map(champion => {
+            return {
+                id: champion.id,
+                name: champion.name,
+                key: champion.key,
+                imageUrl: async () => {
+                    let images = await getRandomChampionImage(champion.key)
+                    return images[Math.floor(Math.random() * images.length)]
+                }
+            }
+        })
+
+        TEMP.championList = list
+    }
+
+    refreshChampionList().then(() => {
+         loadRandom();
+    })
+
+    function getRandomChampion() {
+        let champ = TEMP.championList[Math.floor(Math.random() * TEMP.championList.length)];
+        console.log("random champ", champ)
+        return champ
+    }
+
+
+    function getPossibleChampions() {
+
+    }
+
+    // Helpers
+    const isLetter = ch => !!ch && /\p{L}/u.test(ch);
+    const sanitize = s => s?.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // State
+    let current = null;   // { imageUrl, name, position, key } from getRandomChampion()
+    let revealed = [];    // boolean per character
+
+    // Guard: host must provide getRandomChampion()
+    function hostOk() {
+      return typeof window.getRandomChampion === 'function';
+    }
+
+    function setStatus(text, kind = 'info') {
+      status.textContent = text || '';
+      status.style.color = kind === 'err' ? '#ff8b8b' : kind === 'ok' ? '#8ef7b0' : '';
+    }
+
+    // Render the word as tiles: underscores for hidden letters, show spaces/punct
+    function renderWord() {
+      wordWrap.innerHTML = '';
+      if (!current) return;
+      for (let i = 0; i < current.name.length; i++) {
+        const ch = current.name[i];
+        const tile = document.createElement('div');
+        tile.className = 'char';
+        if (!isLetter(ch)) {
+          tile.classList.add('space');
+          tile.textContent = ch;
+        } else {
+          tile.textContent = revealed[i] ? ch.toUpperCase() : '_';
+        }
+        wordWrap.appendChild(tile);
+      }
+    }
+
+    // Pick random hidden letter and reveal it
+    function revealRandomLetter() {
+      if (!current) return false;
+      const hidden = [];
+      for (let i = 0; i < current.name.length; i++) {
+        if (isLetter(current.name[i]) && !revealed[i]) hidden.push(i);
+      }
+      if (!hidden.length) return false;
+      const idx = hidden[Math.floor(Math.random() * hidden.length)];
+      revealed[idx] = true;
+      // tiny animation
+      const tile = wordWrap.children[idx];
+      if (tile) {
+        tile.textContent = current.name[idx].toUpperCase();
+        tile.classList.add('reveal');
+        setTimeout(() => tile.classList.remove('reveal'), 220);
+      } else {
+        renderWord();
+      }
+      return true;
+    }
+
+    // Check guess
+    function checkGuess() {
+      if (!current) return;
+      const guess = sanitize(input.value || '');
+      const target = sanitize(current.name || '');
+      if (!guess) { setStatus('Type something first.', 'err'); input.classList.add('shake'); setTimeout(()=>input.classList.remove('shake'),260); return; }
+      if (guess === target) {
+        // reveal all
+        for (let i = 0; i < revealed.length; i++) revealed[i] = true;
+        renderWord();
+        setStatus(`Nice — it's ${current.name}!`, 'ok');
+        return true
+      } else {
+        setStatus('Nope — try again.', 'err');
+        input.classList.add('shake');
+        setTimeout(()=>input.classList.remove('shake'),260);
+        return false
+      }
+    }
+
+    // Load random champion from host fn. If missing, show friendly warning and disable UI.
+    async function loadRandom() {
+      if (!hostOk()) {
+        champImg.src = '';
+        champImg.alt = 'No getRandomChampion() provided';
+        wordWrap.innerHTML = '';
+        input.disabled = true;
+        hintBtn.disabled = true;
+        guessBtn.disabled = true;
+        nextBtn.disabled = true;
+        setStatus('Host must provide window.getRandomChampion() — UI disabled.', 'err');
+        return;
+      }
+
+        nextBtn.disabled = true;
+        
+      champImg.src = "/assets/loading-logo-white.png"
+
+      try {
+        const ch = window.getRandomChampion();
+        current = ch;
+      } catch (err) {
+        console.error(err);
+        setStatus('Error calling getRandomChampion() — check console.', 'err');
+        return;
+      }
+
+      // prepare reveal flags (non-letters revealed by default)
+      revealed = [];
+      for (const c of current.name) revealed.push(!isLetter(c));
+
+      // set image and UI
+      champImg.src = (await current.imageUrl()) || '';
+      champImg.alt = current.name || 'Champion image';
+      renderWord();
+      input.value = '';
+      input.disabled = false;
+      hintBtn.disabled = false;
+      guessBtn.disabled = false;
+      nextBtn.disabled = false;
+      setStatus('Type the champion name and press Guess (or Enter).', 'info');
+      input.focus();
+    }
+
+    // Events
+    hintBtn.addEventListener('click', () => {
+      if (!current) return;
+      const ok = revealRandomLetter();
+      if (!ok) setStatus('All letters revealed already.', 'info');
+      else setStatus('A letter was revealed.', 'info');
+    });
+
+    guessBtn.addEventListener('click', checkGuess);
+    nextBtn.addEventListener('click', loadRandom);
+
+    let lastGuessCorrect = false;
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+
+            console.log('Enter:', lastGuessCorrect);
+
+            if (lastGuessCorrect) {
+                // second Enter → go to next
+                lastGuessCorrect = false;
+                loadRandom();
+                return;
+            }
+
+            const correct = checkGuess(); // should return true if guess is correct
+            if(!correct) { revealRandomLetter() }
+            lastGuessCorrect = !!correct;
+        }
+
+        if (e.key === 'Escape') {
+            input.value = '';
+        }
+    });
+
+    // Init
+   
+
+    // Note: getPossibleChampions() is intentionally not used here (per request).
+    // If you want autocomplete, wire input events to window.getPossibleChampions.
+  </script>
+</body>
+</html>

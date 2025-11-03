@@ -1,0 +1,30 @@
+{
+  "name": "wardup-website",
+  "version": "1.0.0",
+  "description": "A fun and interactive way to learn League of Legends.",
+  "homepage": "https://github.com/ImTheSpyke/wardup-website#readme",
+  "bugs": {
+    "url": "https://github.com/ImTheSpyke/wardup-website/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ImTheSpyke/wardup-website.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "npm run build && node ./dist/index.js",
+    "build": "tsc -p tsconfig.json",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@types/node": "^24.10.0",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "typescript": "^5.9.3"
+  }
+}
