@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WardUp — Learn League of Legends</title>
+
+  <!-- Fonts & icons -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0f1221;
+      --card:#161826;
+      --muted:#bfc4d6;
+      --accent-1: linear-gradient(135deg,#6b8cff 0%, #8bd6ff 100%);
+      --accent-2: linear-gradient(135deg,#9b6bff 0%, #ff6bd3 100%);
+      --glass: rgba(255,255,255,0.03);
+      --glass-2: rgba(255,255,255,0.02);
+      --glass-border: rgba(255,255,255,0.04);
+    }
+
+    html,body{
+      height:100%;
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(139,214,255,0.04), transparent 8%),
+                  radial-gradient(900px 400px at 90% 90%, rgba(155,107,255,0.03), transparent 8%),
+                  var(--bg);
+      color:#e9eefb;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      margin:0;
+      padding:0;
+    }
+
+    .navbar {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .brand {
+      display:flex;
+      align-items:center;
+      gap:.6rem;
+      font-weight:700;
+      letter-spacing:.4px;
+    }
+
+    .brand .logo {
+      width:38px;
+      height:38px;
+      border-radius:8px;
+      background:var(--accent-1);
+      box-shadow: 0 6px 20px rgba(107,140,255,0.12), inset 0 -6px 16px rgba(255,255,255,0.03);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:800;
+      color:#0b0f1a;
+    }
+
+    .hero {
+      padding:64px 0 48px;
+      text-align:left;
+    }
+
+    .hero-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      border:1px solid var(--glass-border);
+      border-radius:14px;
+      padding:28px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+    }
+
+    .hero h1{
+      font-size:2.4rem;
+      margin:0 0 .4rem;
+      line-height:1.02;
+    }
+
+    .hero p.lead {
+      color:var(--muted);
+      margin-bottom:18px;
+      font-size:1rem;
+    }
+
+    .cta-btn {
+      padding: .7rem 1.15rem;
+      border-radius:10px;
+      font-weight:600;
+    }
+
+    .search-input {
+      background:var(--glass);
+      border:1px solid var(--glass-border);
+      color: #e9eefb;
+      border-radius:12px;
+      padding:12px 14px;
+    }
+
+    .learning-grid {
+      margin-top:28px;
+    }
+
+    .learning-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.015), transparent);
+      border:1px solid var(--glass-border);
+      border-radius:12px;
+      padding:20px;
+      transition: transform .22s cubic-bezier(.2,.9,.3,1), box-shadow .22s;
+      cursor:pointer;
+      overflow:hidden;
+      min-height:150px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+    }
+
+    .learning-card:hover{
+      transform: translateY(-8px) scale(1.01);
+      box-shadow: 0 14px 40px rgba(2,6,23,0.6);
+    }
+
+    .learning-card .icon-wrap {
+      width:64px;
+      height:64px;
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:30px;
+      box-shadow: 0 8px 20px rgba(11,15,26,0.5);
+    }
+
+    .learning-card .title {
+      font-weight:700;
+      margin-top:12px;
+      font-size:1.05rem;
+    }
+
+    .learning-card .desc {
+      color:var(--muted);
+      font-size:.95rem;
+      margin-top:6px;
+    }
+
+    .stat {
+      display:inline-flex;
+      gap:.5rem;
+      align-items:center;
+      color:var(--muted);
+      font-size:.9rem;
+    }
+
+    .featured {
+      border-radius:12px;
+      padding:18px;
+      background:linear-gradient(90deg, rgba(139,214,255,0.03), rgba(155,107,255,0.03));
+      border:1px solid rgba(255,255,255,0.03);
+    }
+
+    .mini {
+      font-size:.82rem;
+      color:var(--muted);
+    }
+
+    footer{
+      margin-top:48px;
+      padding:34px 0 80px;
+      color:#9fa7c6;
+      font-size:.9rem;
+      text-align:center;
+      border-top:1px solid rgba(255,255,255,0.02);
+    }
+
+    /* responsive tweaks */
+    @media (max-width:767px){
+      .hero{ padding:36px 0; text-align:center; }
+      .hero h1 { font-size:1.8rem; }
+      .learning-card { min-height:140px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg px-3">
+    <div class="container-fluid">
+      <a class="navbar-brand brand" href="#">
+        <div class="logo">W</div>
+        <div>
+          WardUp <div class="mini" style="font-weight:600;font-size:.8rem;color:var(--muted)">learn. ward. win.</div>
+        </div>
+      </a>
+
+      <div class="d-flex align-items-center gap-2 ms-auto">
+        <button class="btn btn-sm btn-outline-light d-none d-md-inline">Docs</button>
+        <button class="btn btn-sm btn-outline-light">Sign in</button>
+        <a class="btn btn-sm btn-primary ms-2 cta-btn" href="#learning-section">Start</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <main class="container">
+    <div class="row align-items-center hero">
+      <div class="col-lg-7">
+        <div class="hero-card">
+          <h1>WardUp — learn League of Legends like a pro</h1>
+          <p class="lead">Small lessons. Quick quizzes. Image challenges and mini-games that actually teach you champions, items, spells and game sense — step by step.</p>
+
+          <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-primary cta-btn" href="#learning-section"><i class="bi bi-lightning-fill me-2"></i>Start learning</a>
+            <a class="btn btn-outline-light cta-btn" href="#featured"><i class="bi bi-bar-chart-line me-2"></i>Try featured quiz</a>
+            <div class="ms-auto d-none d-md-flex align-items-center gap-3">
+              <div class="stat"><i class="bi bi-people-fill"></i> <span class="mini">Community</span></div>
+              <div class="stat"><i class="bi bi-award-fill"></i> <span class="mini">Progress</span></div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <label for="search" class="form-label mini">Search champions, items or spells</label>
+            <div class="input-group">
+              <input id="search" class="form-control search-input" placeholder="Type a champion name (e.g. Ahri) or item..." aria-label="Search">
+              <button id="searchBtn" class="btn btn-outline-light" type="button"><i class="bi bi-search"></i></button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="col-lg-5 mt-4 mt-lg-0">
+        <div class="featured">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="mini">Featured</div>
+              <h5 style="margin:.2rem 0 .4rem">Champion Quiz — Fundamentals</h5>
+              <div class="mini">10 questions • 5–8 minutes • images & ability recall</div>
+            </div>
+            <div class="text-end">
+              <div class="mini">Avg accuracy</div>
+              <div style="font-weight:800;font-size:1.2rem;margin-top:.25rem">72%</div>
+            </div>
+          </div>
+
+          <hr style="opacity:.06;margin:.9rem 0">
+
+          <div class="d-flex gap-3 align-items-center">
+            <div style="width:72px;height:72px;border-radius:10px;overflow:hidden;background:var(--glass-2);display:flex;align-items:center;justify-content:center">
+              <img src="https://ddragon.leagueoflegends.com/cdn/13.17.1/img/champion/Ahri.png" alt="Ahri" style="width:70px;height:70px;object-fit:cover">
+            </div>
+            <div class="flex-grow-1">
+              <div style="display:flex;align-items:center;gap:.6rem;justify-content:space-between">
+                <div><strong>Identify: Ahri</strong><div class="mini">Image + kit recall</div></div>
+                <button class="btn btn-sm btn-primary" id="featuredStart">Start</button>
+              </div>
+              <div class="progress mt-2" style="height:8px;border-radius:8px;background:rgba(255,255,255,0.03)">
+                <div class="progress-bar" role="progressbar" style="width:48%"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+          <div class="hero-card" style="flex:1">
+            <div class="mini">Quick mode</div>
+            <div style="font-weight:700">Daily Quiz</div>
+            <div class="mini mt-2">5 questions • quick warmup</div>
+          </div>
+          <div class="hero-card" style="width:120px;display:flex;flex-direction:column;justify-content:center;align-items:center">
+            <i class="bi bi-lightning-charge-fill" style="font-size:20px"></i>
+            <div class="mini mt-2">Boost</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEARNING SELECTION -->
+    <section id="learning-section" class="learning-grid mt-5">
+      <div class="row g-3">
+        <div class="col-12">
+          <h4 style="margin-bottom:.6rem">What do you want to learn?</h4>
+        </div>
+
+        <div class="col-md-4">
+          <div class="learning-card" role="button" tabindex="0" onclick="openCategory('champions')">
+            <div class="d-flex align-items-start gap-3">
+              <div class="icon-wrap" style="background:var(--accent-1);">
+                <img src="https://ddragon.leagueoflegends.com/cdn/13.17.1/img/champion/Ahri.png" alt="" style="width:46px;height:46px;object-fit:contain">
+              </div>
+              <div>
+                <div class="title">Champions</div>
+                <div class="desc">Abilities, roles, counters and visual recognition — learn champions with image quizzes and scenario tests.</div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div class="mini stat"><i class="bi bi-shield-fill-check"></i> Popular: Ahri, Lee Sin, Vayne</div>
+              <div><a class="btn btn-sm btn-outline-light" href="#" onclick="event.preventDefault(); openCategory('champions')">Explore</a></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="learning-card" role="button" tabindex="0" onclick="openCategory('items')">
+            <div class="d-flex align-items-start gap-3">
+              <div class="icon-wrap" style="background:var(--accent-2);">
+                <img src="https://ddragon.leagueoflegends.com/cdn/13.17.1/img/item/1001.png" alt="" style="width:48px;height:48px;object-fit:contain">
+              </div>
+              <div>
+                <div class="title">Items</div>
+                <div class="desc">Stats, actives, builds and item timing — know what to buy and why.</div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div class="mini stat"><i class="bi bi-basket3"></i> Popular: Kraken Slayer, Zeke's</div>
+              <div><a class="btn btn-sm btn-outline-light" href="#" onclick="event.preventDefault(); openCategory('items')">Explore</a></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="learning-card" role="button" tabindex="0" onclick="openCategory('spells')">
+            <div class="d-flex align-items-start gap-3">
+              <div class="icon-wrap" style="background:linear-gradient(135deg,#ffd36b,#ff8b6b);">
+                <img src="https://ddragon.leagueoflegends.com/cdn/13.17.1/img/spell/SummonerFlash.png" alt="" style="width:44px;height:44px;object-fit:contain">
+              </div>
+              <div>
+                <div class="title">Spells & Runes</div>
+                <div class="desc">Summoner spells, keystones and rune synergies — understand choices and timing.</div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div class="mini stat"><i class="bi bi-dice-5"></i> Popular: Flash, Ignite, Teleport</div>
+              <div><a class="btn btn-sm btn-outline-light" href="#" onclick="event.preventDefault(); openCategory('spells')">Explore</a></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- small footer CTA -->
+    <div class="mt-5 d-flex justify-content-between align-items-center">
+      <div>
+        <strong>Build a learning path.</strong>
+        <div class="mini">Pick a category and we’ll give you a step-by-step plan to improve.</div>
+      </div>
+      <div><button class="btn btn-outline-light" onclick="alert('Not implemented — demo only')">Create path</button></div>
+    </div>
+
+    <footer>
+      © <strong>WardUp</strong> 2025 — Made for learners. Site prototype — not affiliated with Riot Games.
+      <div style="margin-top:.6rem" class="mini">Privacy · Terms · Source on <a href="#" style="color:inherit;text-decoration:underline">GitHub</a></div>
+    </footer>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Simple interactions (demo-friendly)
+    document.getElementById('searchBtn').addEventListener('click', () => {
+      const q = document.getElementById('search').value.trim();
+      if(!q) { document.getElementById('search').focus(); return; }
+      // stub: open search results
+      alert('Search demo: ' + q + '\\n(Implement search + API to get actual results.)');
+    });
+
+    function openCategory(cat){
+      // demo stub - replace with router logic or modal
+      alert('Open category: ' + cat + '\\n(Implement category page / SPA route.)');
+    }
+
+    document.getElementById('featuredStart').addEventListener('click', () => {
+      alert('Starting featured quiz — demo stub.');
+    });
+
+    // keyboard accessibility for cards
+    document.querySelectorAll('.learning-card').forEach(card=>{
+      card.addEventListener('keyup', e => { if(e.key === 'Enter' || e.key === ' ') card.click(); });
+    });
+  </script>
+</body>
+</html>
