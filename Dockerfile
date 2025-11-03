@@ -1,13 +1,11 @@
-# Use an official Node image
+# ----------------------
+# Build stage
+# ----------------------
 FROM node:22-alpine AS builder
-
-# Set work directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files & install deps
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
 # Copy source files
@@ -16,12 +14,13 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
-# Use a smaller runtime image
+# ----------------------
+# Runtime stage
+# ----------------------
 FROM node:22-alpine
-
 WORKDIR /app
 
-# Copy only what’s needed for runtime
+# Copy only runtime deps
 COPY --from=builder /app/package*.json ./
 RUN npm install --omit=dev
 
@@ -29,8 +28,8 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
 
-# Expose the app port
+# Expose port
 EXPOSE 80
 
-# Start command
+# Start app
 CMD ["npm", "start"]

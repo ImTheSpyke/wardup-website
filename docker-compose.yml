@@ -1,13 +1,14 @@
-version: "3.8"
-
 services:
   wardup:
     build: .
     container_name: wardup
     ports:
       - "80:80"
-    volumes:
-      - .:/app
-      - /app/node_modules
     environment:
-      - NODE_ENV=production
+      NODE_ENV: production
+    restart: unless-stopped
+    volumes:
+      # Mount public folder for easy updates without rebuilding
+      - ./public:/app/public:ro
+      # Keep node_modules inside container, don't overwrite
+      - /app/node_modules
