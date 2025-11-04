@@ -653,6 +653,9 @@
         if (e.key === 'Enter') {
             e.preventDefault();
 
+            // If no text, do nothing
+            if (!input.value) return;
+
             console.log('Enter:', lastGuessCorrect);
 
             if (lastGuessCorrect) {
