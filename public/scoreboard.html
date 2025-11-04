@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>WardUp — Scoreboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0f1221;
+      --card:#0f1626;
+      --muted:#9fa7c6;
+      --accent:#6b8cff;
+      --glass: rgba(255,255,255,0.03);
+    }
+    html,body{height:100%;margin:0;background:radial-gradient(800px 400px at 10% 10%, rgba(139,214,255,0.02), transparent),var(--bg);color:#eaf0ff;font-family:Inter,system-ui,Segoe UI,Arial}
+    .wrap{max-width:980px;margin:32px auto;padding:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid var(--glass);border-radius:12px;padding:14px;box-shadow:0 14px 40px rgba(2,6,23,0.6)}
+    h1{margin:0 0 8px;font-size:1.05rem}
+    .sub{color:var(--muted);font-size:.92rem;margin-bottom:12px}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse;min-width:720px}
+    thead th{font-size:.85rem;text-align:left;padding:10px 12px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.03)}
+    tbody tr{transition:background .12s}
+    tbody tr:hover{background:rgba(255,255,255,0.01)}
+    td{padding:10px 12px;color:#eaf0ff;vertical-align:middle;border-bottom:1px solid rgba(255,255,255,0.02)}
+    .rank{width:56px;font-weight:800}
+    .champ{display:flex;gap:12px;align-items:center}
+    .thumb{width:48px;height:48px;border-radius:8px;object-fit:cover;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02)}
+    .champ-name{font-weight:700}
+    .small{font-size:.88rem;color:var(--muted)}
+    .score{text-align:right;font-weight:800;width:110px}
+    .seen{text-align:right;width:90px;color:var(--muted)}
+    .col-right{white-space:nowrap}
+    .empty{padding:28px;text-align:center;color:var(--muted)}
+    .footer{margin-top:12px;color:var(--muted);font-size:.92rem;text-align:right}
+    @media (max-width:760px){
+      .thumb{width:40px;height:40px}
+      table{min-width:640px}
+      .score,.seen{text-align:left}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" role="main" aria-labelledby="title">
+      <h1 id="title">Scoreboard</h1>
+      <div class="sub">Best guessed (lower score) → hardest. Data loaded via <code>refreshChampionList()</code>.</div>
+
+      <div class="table-wrap">
+        <table aria-describedby="title">
+          <thead>
+            <tr>
+              <th class="rank">#</th>
+              <th>Champion</th>
+              <th class="score col-right">Score</th>
+              <th class="seen col-right">Seen</th>
+              <th class="col-right">Solved</th>
+              <th class="col-right">Skipped</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div id="empty" class="empty" style="display:none">No champions loaded. Provide <code>async function refreshChampionList()</code> that fills <code>TEMP.championList</code>.</div>
+
+      <div class="footer" id="footer">Total champions: 0 • Total times seen: 0</div>
+    </div>
+  </div>
+
+  <script>
+    // Minimal scoreboard only. Expects an async refreshChampionList() to populate TEMP.championList.
+    window.TEMP = window.TEMP || {
+      championList: [],
+      guesses: {
+        firstTry: [], secondTry: [], thirdTry: [], moreThanThree: [], skipped: [], total: 0
+      },
+      championWeights: {}
+    };
+
+    async function refreshChampionList() {
+        let championsJSON = (await (await fetch("https://leagueoflegends.game.cdn.pog-group.com/ddragon/versions/15.2.1/15.2.1/data/fr_FR/champion.json")).json()).data
+        
+        let list = Object.values(championsJSON).map(champion => {
+            return {
+                id: champion.id,
+                name: champion.name,
+                key: champion.key,
+                imageUrl: () => {
+                    return `https://leagueoflegends.game.cdn.pog-group.com/ddragon/versions/15.18.1/img/champion/tiles/${champion.id}_0.jpg`
+                }
+            }
+        })
+
+        TEMP.championList = list
+    }
+
+
+    function saveWeights() { localStorage.setItem('championWeights', JSON.stringify(TEMP.championWeights)); }
+    function loadWeights() {
+      const raw = localStorage.getItem('championWeights');
+      if (!raw) return;
+      try { const p = JSON.parse(raw); if (p && typeof p === 'object') TEMP.championWeights = p; } catch(e){ console.warn('loadWeights err', e); }
+    }
+
+    function ensureWeightFor(champ) {
+      const k = String(champ.key);
+      if (!TEMP.championWeights[k]) {
+        TEMP.championWeights[k] = { key: champ.key, weight: 1.0, timesShown: 0, timesSolved: 0, timesSkipped: 0, lastUpdated: 0 };
+      }
+      return TEMP.championWeights[k];
+    }
+
+    function pretty(v){ return Number.isFinite(v) ? v.toFixed(2) : '—'; }
+
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    async function initScoreboard(){
+      // try to load champion list via provided async function
+      if (typeof window.refreshChampionList === 'function') {
+        try {
+          await window.refreshChampionList(); // should fill TEMP.championList
+        } catch (err) {
+          console.warn('refreshChampionList failed', err);
+        }
+      }
+
+      // load saved weights
+      loadWeights();
+
+      // if no champions -> show hint
+      if (!Array.isArray(TEMP.championList) || TEMP.championList.length === 0) {
+        document.getElementById('empty').style.display = 'block';
+        document.getElementById('tbody').innerHTML = '';
+        document.getElementById('footer').textContent = 'Total champions: 0 • Total times seen: 0';
+        return;
+      } else {
+        document.getElementById('empty').style.display = 'none';
+      }
+
+      // ensure weights exist
+      TEMP.championList.forEach(c => ensureWeightFor(c));
+
+      render();
+    }
+
+    function buildList() {
+      return TEMP.championList.map(c => {
+        const meta = TEMP.championWeights[String(c.key)] || { weight: 1.0, timesShown: 0, timesSolved: 0, timesSkipped: 0 };
+        const img = (typeof c.imageUrl === 'function') ? safeCallImage(c) : (c.imageUrl || '');
+        return {
+          key: c.key,
+          name: c.name,
+          img,
+          weight: Number(meta.weight || 1),
+          timesShown: Number(meta.timesShown || 0),
+          timesSolved: Number(meta.timesSolved || 0),
+          timesSkipped: Number(meta.timesSkipped || 0)
+        };
+      }).sort((a,b) => {
+        if (a.weight !== b.weight) return a.weight - b.weight; // lower score first
+        return b.timesShown - a.timesShown;
+      });
+    }
+
+    function safeCallImage(champ){
+      try {
+        const v = champ.imageUrl();
+        return v || '';
+      } catch(e){
+        return '';
+      }
+    }
+
+    function render(){
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = '';
+      const list = buildList();
+      let totalSeen = 0;
+      for (let i=0;i<list.length;i++){
+        const it = list[i];
+        totalSeen += it.timesShown;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="rank">${i+1}</td>
+          <td>
+            <div class="champ">
+              <img class="thumb" src="${escapeHtml(it.img)}" alt="${escapeHtml(it.name)}">
+              <div>
+                <div class="champ-name">${escapeHtml(it.name)}</div>
+                <div class="small">key: ${escapeHtml(String(it.key))}</div>
+              </div>
+            </div>
+          </td>
+          <td class="score col-right">${pretty(it.weight)}</td>
+          <td class="seen col-right">${it.timesShown}</td>
+          <td class="col-right">${it.timesSolved}</td>
+          <td class="col-right">${it.timesSkipped}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+      document.getElementById('footer').textContent = `Total champions: ${list.length} • Total times seen: ${totalSeen}`;
+    }
+
+    // init on load
+    initScoreboard();
+
+    // expose manual refresh
+    window.refreshScoreboard = async function(){
+      if (typeof window.refreshChampionList === 'function') {
+        await window.refreshChampionList();
+      }
+      loadWeights();
+      TEMP.championList.forEach(c => ensureWeightFor(c));
+      render();
+    };
+  </script>
+</body>
+</html>

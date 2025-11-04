@@ -14,6 +14,9 @@ app.get('/', (_req: Request, res: Response) => {
   res.sendFile('champions.html', { root: appRoot });
 });
 
+app.get('/scoreboard', (_req: Request, res: Response) => {
+  res.sendFile('scoreboard.html', { root: appRoot });
+});
 
 /* /assets/img/my-image.png
 assets/blabla.png

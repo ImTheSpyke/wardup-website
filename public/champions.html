@@ -279,6 +279,8 @@
     console.log('%cType resetWeights() in console to reset weights for displayed champions.', 'font-size:1em;background: #222; color: #fff;');
     console.log("\n\n")
 
+    function getWeightOf(name) { return TEMP.championWeights[Object.values(TEMP.championList).find(x => x.name.toLowerCase() == name).key].weight }
+
     
 
     // --- Utility (pure JS, no external deps) ---
@@ -418,7 +420,7 @@
         w.weight = clamp(w.weight * 0.7 + rawNewWeight * 0.3, 0.05, 12);
 
         // update solved counter if guessed in easy categories
-        if (inArray(TEMP.guesses.firstTry) || inArray(TEMP.guesses.secondTry) || inArray(TEMP.guesses.thirdTry) || inArray(TEMP.guesses.moreThanThree)) {
+        if (!isSkipped && categoryScore < 0) {
             w.timesSolved = (w.timesSolved || 0) + 1;
         }
 
