@@ -265,6 +265,7 @@
         <button id="hint" class="btn btn-ghost" type="button">Hint</button>
         <button id="guess" class="btn btn-primary" type="button">Guess</button>
         <button id="next" class="btn btn-ghost" type="button">Next</button>
+        <button id="scoreboard" class="btn btn-ghost" type="button">Scoreboard</button>
       </div>
 
       <div id="status" class="status" aria-live="polite"></div>
@@ -292,6 +293,7 @@
     const guessBtn = el('guess');
     const nextBtn = el('next');
     const status = el('status');
+    const scoreboardBtn = el('scoreboard');
 
     // config checkboxes
     const enableSkins = el('enableSkins');
@@ -858,6 +860,10 @@
 
     // Init
    
+
+    scoreboardBtn.addEventListener('click', () => {
+      window.location = '/scoreboard';
+    });
 
     // Note: getPossibleChampions() is intentionally not used here (per request).
     // If you want autocomplete, wire input events to window.getPossibleChampions.
