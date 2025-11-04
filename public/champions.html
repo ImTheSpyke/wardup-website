@@ -80,6 +80,7 @@
     }
     .btn-primary{ background:var(--accent); color:#061024; }
     .btn-ghost{ background:transparent;border:1px solid rgba(255,255,255,0.04); color:var(--muted); }
+    .btn-danger{ background:#f44336;color:#fff; }
 
     .input{
       width:100%;max-width:420px;margin:10px auto 0;display:block;padding:.7rem .9rem;border-radius:10px;border:1px solid rgba(255,255,255,0.04);
@@ -239,6 +240,7 @@
             <span class="track"><span class="knob"></span></span>
             <span class="label">Random hints</span>
         </label>
+        <button id="clearStats" class="btn btn-sm btn-danger">Clear stats</button>
       </div>
       <img id="champImg" class="champ-img" src="" alt="champion">
       <!-- List of percentages of first try, second, third or more -->
@@ -284,6 +286,7 @@
     const enableSkins = el('enableSkins');
     const onlyUseCentered = el('onlyUseCentered');
     const randomHints = el('randomHints');
+    const clearStatsBtn = el('clearStats');
 
 
     const TEMP = {
@@ -297,6 +300,44 @@
             total: 0
         }
     }
+
+    function saveStats() {
+        localStorage.setItem('guesses', JSON.stringify(TEMP.guesses));
+    }
+    function loadStats() {
+        let loaded = JSON.parse(localStorage.getItem('guesses'))
+        if (loaded) {
+            TEMP.guesses.firstTry = loaded.firstTry || [];
+            TEMP.guesses.secondTry = loaded.secondTry || [];
+            TEMP.guesses.thirdTry = loaded.thirdTry || [];
+            TEMP.guesses.moreThanThree = loaded.moreThanThree || [];
+            TEMP.guesses.skipped = loaded.skipped || [];
+            TEMP.guesses.total = loaded.total || 0;
+        }
+        saveStats()
+    }
+    function clearStats() {
+        TEMP.guesses = {
+            firstTry: [],
+            secondTry: [],
+            thirdTry: [],
+            moreThanThree: [],
+            skipped: [],
+            total: 0
+        }
+        saveStats()
+        updateGuessesDisplay()
+    }
+    loadStats()
+    updateGuessesDisplay()
+    
+
+    clearStatsBtn.addEventListener('click', () => {
+        let confirmation = confirm("Are you sure you want to clear all stats?");
+        if (confirmation) {
+            clearStats();
+        }
+    })
 
     function addToGuesses(champion, _revealedLetters) {
 
@@ -314,11 +355,14 @@
             TEMP.guesses.moreThanThree.push(champion);
         }
         TEMP.guesses.total++;
+        saveStats()
+
         updateGuessesDisplay()
     }
     function addToGuessesSkipped(champion) {
         TEMP.guesses.skipped.push(champion);
         TEMP.guesses.total++;
+        saveStats()
         updateGuessesDisplay()
     }
 
