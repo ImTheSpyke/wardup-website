@@ -272,6 +272,15 @@
   </div>
 
   <script>
+
+    console.log("\n\n")
+    console.log('%cWardUp!', 'font-size:3em;background: #222; color: #bada55;');
+    console.log('%cDesigned by @imthespyke !', 'font-size:1.5em;background: #222; color: #da55ba;');
+    console.log('%cType resetWeights() in console to reset weights for displayed champions.', 'font-size:1em;background: #222; color: #fff;');
+    console.log("\n\n")
+
+    
+
     // --- Utility (pure JS, no external deps) ---
     const el = id => document.getElementById(id);
     const champImg = el('champImg');
@@ -298,8 +307,182 @@
             moreThanThree: [],
             skipped: [],
             total: 0
+        },
+        championWeights: {}
+    }
+
+
+    function resetWeights() {
+        TEMP.championWeights = {};
+        console.log("Weights reset.");
+    }
+
+
+    /* ---------- Helpers ---------- */
+
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+    function ensureWeightFor(champ) {
+        const k = String(champ.key);
+        if (!TEMP.championWeights[k]) {
+            TEMP.championWeights[k] = {
+            key: champ.key,
+            weight: 1.0,       // initial neutral weight
+            timesShown: 0,
+            timesSolved: 0,
+            timesSkipped: 0,
+            lastPicked: 0
+            };
+        }
+        return TEMP.championWeights[k];
+    }
+
+
+    function saveWeights() {
+        localStorage.setItem('championWeights', JSON.stringify(TEMP.championWeights));
+    }
+
+    function loadWeights() {
+        let loaded = localStorage.getItem('championWeights');
+        try {
+            const parsed = JSON.parse(loaded);
+            if (parsed && typeof parsed === 'object') {
+                TEMP.championWeights = parsed;
+            }
+        } catch (e) {
+            console.warn('Failed to load champion weights:', e);
         }
     }
+
+    
+    /* ---------- editChampionWeight ----------
+    Call this AFTER a round finishes for `current` (the champion object),
+    using the global `revealed` array (Array<boolean>) that contains which
+    letters were revealed at the moment of finish (true = revealed).
+    */
+    function editChampionWeight(current, isSkipped = false) {
+        if (!current) return;
+        const key = String(current.key);
+        const w = ensureWeightFor(current);
+
+        // increment seen counter
+        w.timesShown = (w.timesShown || 0) + 1;
+
+        // compute letter reveal ratio (letters revealed / total letters)
+        const name = current.name || '';
+        let totalLetters = 0, revealedLetters = 0;
+        for (let i = 0; i < name.length; i++) {
+            if (isLetter(name[i])) {
+            totalLetters++;
+            if (Array.isArray(window.revealed) && window.revealed[i]) revealedLetters++;
+            }
+        }
+        const revealRatio = totalLetters > 0 ? (revealedLetters / totalLetters) : 0;
+
+        // determine attempt category based on TEMP.guesses arrays
+        const inArray = (arr) => Array.isArray(arr) && arr.some(x => String(x) === key);
+        let categoryScore = 0; // negative = easy, positive = hard
+
+        let revealedLettersCount = revealed.filter(x => x === true).length
+        let revealedLettersPercentage = revealedLettersCount / revealed.length
+
+        if (revealedLettersPercentage === 0) categoryScore -= 1.2;
+        if (revealedLettersPercentage < 0.33) categoryScore -= 0.2;
+        if (revealedLettersPercentage < 0.67) categoryScore += 2;
+        if (revealedLettersPercentage >= 0.67) categoryScore += 4;
+        if(revealedLettersPercentage === 1) categoryScore += 10;
+        if (isSkipped) {
+            categoryScore += 2.5; // heavier boost for skipped ones
+            w.timesSkipped = (w.timesSkipped || 0) + 1;
+        }
+
+        // difficulty component from revealRatio: more reveals => harder
+        // scale: revealRatio 0.0 ->  -0.5 (very easy), 0.5 -> 0, 1.0 -> +1.0 (very hard)
+        const revealComponent = (revealRatio - 0.5) * 2.0;
+
+        // frequency decay: if champ was shown many times and solved often, decrease weight slowly
+        const repeatFactor = Math.log10((w.timesShown || 1) + 1); // grows slowly with timesShown
+
+        // solved bonus (if found in easy buckets)
+        const solvedCount = (w.timesSolved || 0);
+        const solvedPenalty = solvedCount * 0.12; // more solved -> slightly reduce weight
+
+        // combine into a delta
+        let delta = 0.6 * categoryScore + 0.9 * revealComponent - solvedPenalty;
+        // normalize by repeat factor to avoid exploding weights for frequent champs
+        delta = delta / clamp(repeatFactor, 1, 5);
+
+        // apply to weight with smoothing
+        const rawNewWeight = clamp(w.weight + delta, 0.1, 10);
+        // smooth: keep some inertia (70% old, 30% new)
+        w.weight = clamp(w.weight * 0.7 + rawNewWeight * 0.3, 0.05, 12);
+
+        // update solved counter if guessed in easy categories
+        if (inArray(TEMP.guesses.firstTry) || inArray(TEMP.guesses.secondTry) || inArray(TEMP.guesses.thirdTry) || inArray(TEMP.guesses.moreThanThree)) {
+            w.timesSolved = (w.timesSolved || 0) + 1;
+        }
+
+        // record last updated time
+        w.lastUpdated = Date.now();
+
+        saveWeights();
+
+        // debug (optional)
+        // console.debug('editChampionWeight', key, { revealRatio, categoryScore, delta, newWeight: w.weight, timesShown: w.timesShown });
+        return w.weight;
+    }
+
+    /* ---------- getRandomChampion ----------
+    Returns a champion object from TEMP.championList chosen by weighted random.
+    Updates lastPicked and timesShown in TEMP.championWeights but DOES NOT modify guesses.
+    */
+    function getRandomChampion() {
+        if (!Array.isArray(TEMP.championList) || TEMP.championList.length === 0) return null;
+
+        // ensure all champions have weight entries
+        for (const c of TEMP.championList) ensureWeightFor(c);
+
+        // build weighted list (optionally you can filter out champions here)
+        const entries = TEMP.championList.map(c => {
+            const meta = TEMP.championWeights[String(c.key)] || { weight: 1.0 };
+            // ensure weight is positive
+            const weight = clamp(Number(meta.weight) || 1.0, 0.01, 1000);
+            return { champ: c, weight };
+        });
+
+        // compute total and pick
+        const totalWeight = entries.reduce((s, e) => s + e.weight, 0);
+        if (totalWeight <= 0) {
+            // fallback uniform random
+            return entries[Math.floor(Math.random() * entries.length)].champ;
+        }
+        let r = Math.random() * totalWeight;
+        for (const e of entries) {
+            r -= e.weight;
+            if (r <= 0) {
+            // mark pick metadata
+            const meta = ensureWeightFor(e.champ);
+            meta.lastPicked = Date.now();
+            // do NOT increment timesShown here if you prefer to increment only after round ends;
+            // but we increment so the weight algorithm can use timesShown when next editing.
+            meta.timesShown = (meta.timesShown || 0) + 1;
+            return e.champ;
+            }
+        }
+
+        // fallback
+        const last = entries[entries.length - 1];
+        const meta = ensureWeightFor(last.champ);
+        meta.lastPicked = Date.now();
+        meta.timesShown = (meta.timesShown || 0) + 1;
+        return last.champ;
+    }
+
+
+
+
+
+
 
     function saveStats() {
         localStorage.setItem('guesses', JSON.stringify(TEMP.guesses));
@@ -329,6 +512,7 @@
         updateGuessesDisplay()
     }
     loadStats()
+    loadWeights()
     updateGuessesDisplay()
     
 
@@ -486,13 +670,6 @@
          loadRandom();
     })
 
-    function getRandomChampion() {
-        let champ = TEMP.championList[Math.floor(Math.random() * TEMP.championList.length)];
-        console.log("random champ", champ)
-        return champ
-    }
-
-
     function getPossibleChampions() {
 
     }
@@ -574,6 +751,7 @@
       if (guess === target) {
         // reveal all
         setStatus(`Nice — it's ${current.name}!`, 'ok');
+        editChampionWeight(current);
         addToGuesses(current, revealed);
         renderWord(true);
         return true
@@ -642,6 +820,7 @@
     guessBtn.addEventListener('click', checkGuess);
     nextBtn.addEventListener('click', () => {
         if(lastGuessCorrect == false) {
+            editChampionWeight(current, true);
             addToGuessesSkipped(current);
         }
         lastGuessCorrect = false;
