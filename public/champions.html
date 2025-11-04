@@ -178,15 +178,11 @@
   <div class="wrap">
     <div class="card" role="main" aria-labelledby="title">
       <div id="title" class="title">Guess the Champion</div>
+      
       <div class="hintline">Image in the center — type the name and press Guess (or Enter). Use Hint to reveal a letter.</div>
 
-      <img id="champImg" class="champ-img" src="" alt="champion">
-
-      <div id="word" class="word" aria-live="polite" aria-atomic="true"></div>
-
-      <input id="input" class="input" placeholder="Type champion name..." autocomplete="off" />
-
       <div class="controls">
+        
         <label class="toggle" for="enableSkins">
             <input id="enableSkins" type="checkbox" />
             <span class="track"><span class="knob"></span></span>
@@ -196,7 +192,20 @@
             <input id="onlyUseCentered" type="checkbox" />
             <span class="track"><span class="knob"></span></span>
             <span class="label">Only use centered images</span>
-        </label><br>
+        </label>
+        <label class="toggle" for="randomHints">
+            <input id="randomHints" type="checkbox" />
+            <span class="track"><span class="knob"></span></span>
+            <span class="label">Random hints</span>
+        </label>
+      </div>
+      <img id="champImg" class="champ-img" src="" alt="champion">
+
+      <div id="word" class="word" aria-live="polite" aria-atomic="true"></div>
+
+      <input id="input" class="input" placeholder="Type champion name..." autocomplete="off" />
+
+      <div class="controls">
         <button id="hint" class="btn btn-ghost" type="button">Hint</button>
         <button id="guess" class="btn btn-primary" type="button">Guess</button>
         <button id="next" class="btn btn-ghost" type="button">Next</button>
@@ -216,8 +225,11 @@
     const guessBtn = el('guess');
     const nextBtn = el('next');
     const status = el('status');
+
+    // config checkboxes
     const enableSkins = el('enableSkins');
     const onlyUseCentered = el('onlyUseCentered');
+    const randomHints = el('randomHints');
 
 
     const TEMP = {
@@ -376,14 +388,19 @@
     }
 
     // Pick random hidden letter and reveal it
-    function revealRandomLetter() {
+    function revealLetter() {
       if (!current) return false;
       const hidden = [];
       for (let i = 0; i < current.name.length; i++) {
         if (isLetter(current.name[i]) && !revealed[i]) hidden.push(i);
       }
       if (!hidden.length) return false;
-      const idx = hidden[Math.floor(Math.random() * hidden.length)];
+      let idx;
+      if (randomHints.checked) {
+        idx = hidden[Math.floor(Math.random() * hidden.length)];
+      } else {
+        idx = hidden.shift();
+      }
       revealed[idx] = true;
       // tiny animation
       const tile = wordWrap.children[idx];
@@ -464,7 +481,7 @@
     // Events
     hintBtn.addEventListener('click', () => {
       if (!current) return;
-      const ok = revealRandomLetter();
+      const ok = revealLetter();
       if (!ok) setStatus('All letters revealed already.', 'info');
       else setStatus('A letter was revealed.', 'info');
     });
@@ -487,7 +504,7 @@
             }
 
             const correct = checkGuess(); // should return true if guess is correct
-            if(!correct) { revealRandomLetter() }
+            if(!correct) { revealLetter() }
             lastGuessCorrect = !!correct;
         }
 
