@@ -41,7 +41,7 @@
     }
     html,body{height:100%;margin:0;background:var(--bg);color:#eaf0ff;font-family:Inter,system-ui,Segoe UI,Arial;display:flex;align-items:center;justify-content:center}
     .wrap{
-      width:100%;max-width:640px;padding:28px;
+      width:100%;max-width:740px;padding:28px;
     }
     .card{
       background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
@@ -172,6 +172,47 @@
   .toggle .label { font-size: 0.9rem; }
 }
 
+
+
+.guess-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.percentages {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.guess {
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  min-width: 70px;
+  text-align: center;
+  color: #fff;
+  transition: background 0.3s ease;
+  font-size: 0.95rem;
+}
+
+/* Color gradient for guesses */
+.guess_firsttry    { background: #4caf50; }  /* green */
+.guess_secondtry   { background: #a3b114; }  /* lime/yellow */
+.guess_thirdtry    { background: #e78a00; }  /* orange */
+.guess_morethan3   { background: #f44336; }  /* red */
+.guess_skipped     { background: #888; }     /* grey */
+
+.total-champs {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #eee;
+}
   </style>
 </head>
 <body>
@@ -200,6 +241,19 @@
         </label>
       </div>
       <img id="champImg" class="champ-img" src="" alt="champion">
+      <!-- List of percentages of first try, second, third or more -->
+       <div class="guess-stats">
+        <div class="percentages">
+            <span class="guess guess_firsttry">0% (0)</span>
+            <span class="guess guess_secondtry">0% (0)</span>
+            <span class="guess guess_thirdtry">0% (0)</span>
+            <span class="guess guess_morethan3">0% (0)</span>
+            <span class="guess guess_skipped">Skipped: 0</span>
+        </div>
+        <div class="total-champs">
+            Total: <span class="total-count">0</span>
+        </div>
+      </div>
 
       <div id="word" class="word" aria-live="polite" aria-atomic="true"></div>
 
@@ -233,8 +287,56 @@
 
 
     const TEMP = {
-        championList: []
+        championList: [],
+        guesses: {
+            firstTry: [],
+            secondTry: [],
+            thirdTry: [],
+            moreThanThree: [],
+            skipped: [],
+            total: 0
+        }
     }
+
+    function addToGuesses(champion, _revealedLetters) {
+
+        console.log("addToGuesses", champion, _revealedLetters)
+
+        let revealedLetters = _revealedLetters.filter(r => r == true).length
+        // Check with revealed chars array if its first try, second, third or more.
+        if (revealedLetters === 0) {
+            TEMP.guesses.firstTry.push(champion);
+        } else if (revealedLetters === 1) {
+            TEMP.guesses.secondTry.push(champion);
+        } else if (revealedLetters === 2) {
+            TEMP.guesses.thirdTry.push(champion);
+        } else {
+            TEMP.guesses.moreThanThree.push(champion);
+        }
+        TEMP.guesses.total++;
+        updateGuessesDisplay()
+    }
+    function addToGuessesSkipped(champion) {
+        TEMP.guesses.skipped.push(champion);
+        TEMP.guesses.total++;
+        updateGuessesDisplay()
+    }
+
+    function updateGuessesDisplay() {
+        // Calculate percentages
+        const { firstTry, secondTry, thirdTry, moreThanThree, skipped, total } = TEMP.guesses;
+
+        const calcPercent = (arr) => total > 0 ? Math.round((arr.length / total) * 100) : 0;
+
+        document.querySelector('.guess_firsttry').textContent    = `1th ${calcPercent(firstTry)}% (${firstTry.length})`;
+        document.querySelector('.guess_secondtry').textContent   = `2th ${calcPercent(secondTry)}% (${secondTry.length})`;
+        document.querySelector('.guess_thirdtry').textContent    = `3rd ${calcPercent(thirdTry)}% (${thirdTry.length})`;
+        document.querySelector('.guess_morethan3').textContent   = `3+ ${calcPercent(moreThanThree)}% (${moreThanThree.length})`;
+        document.querySelector('.guess_skipped').textContent     = `Skipped: ${calcPercent(skipped)}% (${skipped.length})`;
+        document.querySelector('.total-count').textContent       = total;
+    }
+
+    updateGuessesDisplay()
 
 
     async function getAllSkinsOfChampion(champion) {
@@ -370,7 +472,10 @@
     }
 
     // Render the word as tiles: underscores for hidden letters, show spaces/punct
-    function renderWord() {
+    function renderWord(full = false) {
+        if(full) {
+            for (let i = 0; i < revealed.length; i++) revealed[i] = true;
+        }
       wordWrap.innerHTML = '';
       if (!current) return;
       for (let i = 0; i < current.name.length; i++) {
@@ -389,6 +494,7 @@
 
     // Pick random hidden letter and reveal it
     function revealLetter() {
+        console.log("revealLetter")
       if (!current) return false;
       const hidden = [];
       for (let i = 0; i < current.name.length; i++) {
@@ -416,15 +522,16 @@
 
     // Check guess
     function checkGuess() {
+        console.log("checkGuess", current, JSON.stringify(revealed))
       if (!current) return;
       const guess = sanitize(input.value || '');
       const target = sanitize(current.name || '');
       if (!guess) { setStatus('Type something first.', 'err'); input.classList.add('shake'); setTimeout(()=>input.classList.remove('shake'),260); return; }
       if (guess === target) {
         // reveal all
-        for (let i = 0; i < revealed.length; i++) revealed[i] = true;
-        renderWord();
         setStatus(`Nice — it's ${current.name}!`, 'ok');
+        addToGuesses(current, revealed);
+        renderWord(true);
         return true
       } else {
         setStatus('Nope — try again.', 'err');
@@ -449,6 +556,7 @@
       }
 
         nextBtn.disabled = true;
+
         
       champImg.src = "/assets/loading-logo-white.png"
 
@@ -462,6 +570,7 @@
       }
 
       // prepare reveal flags (non-letters revealed by default)
+      console.log("loadRandom, clear revealed")
       revealed = [];
       for (const c of current.name) revealed.push(!isLetter(c));
 
@@ -487,7 +596,13 @@
     });
 
     guessBtn.addEventListener('click', checkGuess);
-    nextBtn.addEventListener('click', loadRandom);
+    nextBtn.addEventListener('click', () => {
+        if(lastGuessCorrect == false) {
+            addToGuessesSkipped(current);
+        }
+        lastGuessCorrect = false;
+        loadRandom();
+    });
 
     let lastGuessCorrect = false;
     input.addEventListener('keydown', (e) => {
