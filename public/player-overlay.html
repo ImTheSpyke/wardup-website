@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>League — Compact Player Overlay (3 boxes)</title>
+  <style>
+    :root{
+      --bg: rgba(6,8,10,0.45);
+      --box: rgba(18,20,23,1);
+      --muted: #d6d6d6;
+      --accent: #6fc3ff;
+      --hp: #2f9322;
+      --hp2: #277d1c;
+      --mp: #5fb3ff;
+      --glass: rgba(255,255,255,0.03);
+      --radius: 10px;
+      font-family: Inter, system-ui, sans-serif;
+
+      --maxOverlayHeight: 124px;
+    }
+
+    .left-box, .center-box, .right-box{
+        height: 124px;
+    }
+
+    * {box-sizing:border-box}
+
+    html,body{height:100%;margin:0;background:transparent}
+
+    /* container centered bottom */
+    .overlay-wrap{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:999999;width:min(1200px,96%);}
+    .overlay{display:flex;gap:2px;align-items:flex-end;justify-content:center}
+
+    /* Left box: stats */
+    .left-box{width:220px;background:var(--box);padding:6px;border-radius:8px 8px 0px 0px;border:1px solid rgba(255,255,255,0.03);color:#eaf3ff}
+    .left-title{font-size:13px;margin-bottom:6px;color:#eaf3ff;font-weight: 400;text-align: center;font-size: 16px;}
+    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+    .stat{display:flex;flex-direction:row;font-size:12px; margin: 0px 5px 0px 5px;}
+    .stat .k{font-size:11px;color:var(--muted)}
+    .stat .v{font-weight:700;color:#fff;margin-left:auto;font-family:consolas,monospace}
+
+    /* Center box: compact and wide, smaller height; spells above, then bars stacked vertically */
+    .center-box{width:700px;background:var(--box);padding:10px 12px;border-radius:8px 8px 0px 0px;border:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;gap:12px;max-height:150px}
+    .champion{width:84px;height:84px;background:rgba(255,255,255,0.02);position:relative;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.03);flex-shrink:0;
+      background-size: 200%;
+      background-position: center;
+      border-radius: 100px;
+      border: 1px solid rgba(255,255,255,0.75);
+    }
+    .champion .level{
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 5px;
+    border-radius: 100px;
+    font-size: 14px;
+    color: white;
+    font-weight: 800;
+    font-family: consolas, monospace;}
+
+    .core{flex:1;display:flex;flex-direction:column;gap:8px;height:100%;justify-content:center}
+    .top-row{display:flex;align-items:flex-start;justify-content:space-between}
+    .summoner{font-weight:700;color:#eaf3ff}
+    .sub{font-size:12px;color:var(--muted)}
+
+    /* spells area sits above bars */
+    .abilities-summoners{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-left:19px;}
+    .abilities{display:flex;gap:8px}
+    .ability{width:48px;height:48px;border-radius:5px;background:rgba(255,255,255,0.03);position:relative;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+    .ability.additional{
+        width: 38px;
+        height: 38px;
+    }
+    .ability .keybind{position:absolute;left:-4px;bottom:-6px;font-size:10px;color:var(--muted);font-size:12px; text-shadow: 1px 1px 5px rgba(0,0,0,1);font-weight:700;}
+    .ability .level{position:absolute;right:2px;bottom:2px;padding:0px 5px;border-radius:100px;font-size:12px;color:white;font-family:consolas, monospace;font-weight:800;
+        text-shadow: 1px 1px 10px #000,
+        1px 1px 8px #000,
+        1px 1px 8px #000,
+        1px 1px 8px #000,
+        1px 1px 8px #000,
+        1px 1px 8px #000,
+        1px 1px 8px #000,
+        1px 1px 8px #000,
+        1px 1px 8px #000,
+        1px 1px 8px #000,
+        1px 1px 10px #000;
+    }
+    .ability .cd-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);font-size:16px;font-weight:700;color:white;opacity:0;transition:opacity 120ms;border-radius: 5px;}
+
+    .summoners{display:flex;flex-direction:column;gap:6px}
+    .summoner-box{width:38px;height:38px;border-radius:8px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;position:relative;font-size:11px;color:var(--muted);border:1px solid rgba(255,255,255,0.02)}
+    .summoner-box .keybind{position:absolute;left:6px;bottom:4px;font-size:10px}
+    .summoner-box .cd-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);font-size:14px;font-weight:700;color:white;opacity:0}
+
+    /* Bars now stacked vertically: hp then mp */
+    .bars-vertical{display:flex;flex-direction:column;gap:6px;align-items:center}
+    .bar{height:21px;border-radius:100px;position:relative;background:rgba(255,255,255,0.02);overflow:hidden;display:flex;align-items:center;width: 90%;border: 1px solid rgba(0,0,0,0.3);}
+    .bar .fill{position:absolute;left:0;top:0;height:100%;width:0%;border-radius:inherit;transition:width 220ms linear;z-index:0}
+    .bar .labels{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 10px;font-weight:700;color:#eaf3ff;font-size:16px;font-family: ui-monospace;}
+    .bar .labels .left{display:flex;width:48px;text-align:left;color:var(--muted);font-weight:700}
+    .bar .labels .center{flex:1;text-align:center}
+    .bar .labels .right{width:80px;text-align:right;color:var(--muted)}
+
+    .hp .fill{background:linear-gradient(90deg, var(--hp),var(--hp2))}
+    .mp .fill{background:linear-gradient(90deg,var(--mp),#2b93ff)}
+
+    /* Right box: items 2x3, runes vertical right, gold below centered */
+    .right-box{
+        --itemSize: 32px;
+        --runeSize: 30px;
+        --gaps: 4px;
+    }
+    .right-box{background:var(--box);padding:10px;border-radius:8px 8px 0px 0px;border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:row;gap:2px;align-items:stretch}
+    .items-runes{display:flex;gap:var(--gaps);align-items:flex-start;flex-direction:column;margin-right:var(--gaps)}
+    .items-grid{display:grid;grid-template-columns:repeat(3,var(--itemSize));grid-template-rows:repeat(2,var(--itemSize));gap:var(--gaps)}
+    .item-slot{width:var(--itemSize);height:var(--itemSize);border-radius:var(--gaps);background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);border:1px solid rgba(255,255,255,0.02);
+        background-position: center;
+        background-size: cover;
+    }
+    .runes-column{display:flex;flex-direction:column;gap:var(--gaps)}
+    .rune-pill{background:rgba(255,255,255,0.02);padding:6px 6px;border-radius:8px;font-size:12px;color:var(--muted);text-align:center;width:var(--runeSize);height: var(--runeSize);border:1px solid rgba(255,255,255,0.02)}
+    .gold-row{display:flex;justify-content:center;align-items:center;width: 100%;}
+    .big-gold{font-size:20px;font-weight:800;color:yellow;}
+
+    @media (max-width:1100px){ .overlay-wrap{width:98%} .left-box{width:180px} .right-box{width:260px} }
+  </style>
+</head>
+<body>
+  <div class="overlay-wrap">
+    <div class="overlay" role="region" aria-label="three-box-overlay">
+
+      <!-- LEFT: stats box (2 columns, 4 rows each) -->
+      <div class="left-box">
+        <div class="left-title">Stats</div>
+        <div class="stats-grid">
+          <div class="stat" data-key="championStat-slot-0"><div class="k">Ability Power</div><div class="v">0</div></div>
+          <div class="stat" data-key="championStat-slot-1"><div class="k">Armor</div><div class="v">0</div></div>
+
+          <div class="stat" data-key="championStat-slot-2"><div class="k">Armor</div><div class="v">0</div></div>
+          <div class="stat" data-key="championStat-slot-3"><div class="k">Armor</div><div class="v">0</div></div>
+
+          <div class="stat" data-key="championStat-slot-4"><div class="k">Armor</div><div class="v">0</div></div>
+          <div class="stat" data-key="championStat-slot-5"><div class="k">Armor</div><div class="v">0</div></div>
+          
+          <div class="stat" data-key="championStat-slot-6"><div class="k">Armor</div><div class="v">0</div></div>
+          <div class="stat" data-key="championStat-slot-7"><div class="k">Armor</div><div class="v">0</div></div>
+        </div>
+      </div>
+
+      <!-- CENTER: champion + spells above, then stacked bars -->
+      <div class="center-box">
+        <div class="champion">
+          <div class="portrait"><span data-key="championPortrait"></span></div>
+          <div class="level"><span data-key="championLevel">14</span></div>
+        </div>
+
+        <div class="core">
+          <!-- SPELLS ABOVE ALL -->
+          <div class="abilities-summoners">
+            <div class="abilities">
+              <div class="ability" data-slot="Q"><div class="keybind"><span data-key="ability-Q-keybind">Q</span></div><div class="level"><span data-key="ability-Q-level">0</span></div><div class="cd-overlay" data-key="cooldown-Q"></div></div>
+              <div class="ability" data-slot="W"><div class="keybind"><span data-key="ability-W-keybind">W</span></div><div class="level"><span data-key="ability-W-level">0</span></div><div class="cd-overlay" data-key="cooldown-W"></div></div>
+              <div class="ability" data-slot="E"><div class="keybind"><span data-key="ability-E-keybind">E</span></div><div class="level"><span data-key="ability-E-level">0</span></div><div class="cd-overlay" data-key="cooldown-E"></div></div>
+              <div class="ability" data-slot="R"><div class="keybind"><span data-key="ability-R-keybind">R</span></div><div class="level"><span data-key="ability-R-level">0</span></div><div class="cd-overlay" data-key="cooldown-R"></div></div>
+
+              
+              <div class="ability additional" data-slot="D"><div class="keybind"><span data-key="ability-D-keybind">D</span></div><div class="level"><span data-key="ability-D-level">0</span></div><div class="cd-overlay" data-key="cooldown-D"></div></div>
+              <div class="ability additional" data-slot="F"><div class="keybind"><span data-key="ability-F-keybind">F</span></div><div class="level"><span data-key="ability-F-level">0</span></div><div class="cd-overlay" data-key="cooldown-F"></div></div>
+            </div>
+          </div>
+
+          <!-- stacked bars (health then mana) -->
+          <div class="bars-vertical">
+            <div class="bar hp">
+              <div class="fill"></div>
+              <div class="labels">
+                <div class="left"><span data-key="healthPercent">0%</span></div>
+                <div class="center"><span data-key="healthText">0 / 0</span></div>
+                <div class="right">+<span data-key="healthRegen">0</span></div>
+              </div>
+            </div>
+
+            <div class="bar mp">
+              <div class="fill"></div>
+              <div class="labels">
+                <div class="left"><span data-key="manaPercent">0%</span></div>
+                <div class="center"><span data-key="manaText">0 / 0</span></div>
+                <div class="right">+<span data-key="manaRegen">0</span></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- RIGHT: items grid 2x3 + runes vertical right + gold below centered -->
+      <div class="right-box">
+        <div class="items-runes">
+            <div class="items-grid">
+                <div class="item-slot" data-key="item-0"><span></span></div>
+                <div class="item-slot" data-key="item-1"><span></span></div>
+                <div class="item-slot" data-key="item-2"><span></span></div>
+                <div class="item-slot" data-key="item-3"><span></span></div>
+                <div class="item-slot" data-key="item-4"><span></span></div>
+                <div class="item-slot" data-key="item-5"><span></span></div>
+            </div>
+
+            <div class="gold-row"><div class="big-gold"><span data-key="currentGold">0</span></div></div>
+        </div>
+        <div class="runes-column">
+            <div class="rune-pill"><span data-key="rune-0"></span></div>
+            <div class="rune-pill"><span data-key="rune-1"></span></div>
+            <div class="rune-pill"><span data-key="rune-2"></span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+
+
+
+
+
+
+
+
+    function updateHealthBar(currentHP, totalHP, regenPerSec = 0) {
+        const percent = totalHP > 0 ? (currentHP / totalHP) * 100 : 0;
+        const percentText = `${Math.round(percent)}%`;
+        const hpText = `${Math.round(currentHP)} / ${Math.round(totalHP)}`;
+
+        // Update bar fill
+        const bar = document.querySelector('.bar.hp .fill');
+        if (bar) bar.style.width = `${Math.min(percent, 100)}%`;
+
+        // Update text elements
+        const percentEl = document.querySelector('[data-key="healthPercent"]');
+        const textEl = document.querySelector('[data-key="healthText"]');
+        const regenEl = document.querySelector('[data-key="healthRegen"]');
+
+        if (percentEl) percentEl.textContent = percentText;
+        if (textEl) textEl.textContent = hpText;
+        if (regenEl) regenEl.textContent = (regenPerSec && currentHP != totalHP ? `${regenPerSec.toFixed(1)}` : '0')
+    }
+
+    function updateResourceBar(current, total, regenPerSec = 0) {
+        const percent = total > 0 ? (current / total) * 100 : 0;
+        const percentText = `${Math.round(percent)}%`;
+        const resourceText = `${Math.round(current)} / ${Math.round(total)}`;
+
+        // Update bar fill
+        const bar = document.querySelector('.bar.mp .fill');
+        if (bar) bar.style.width = `${Math.min(percent, 100)}%`;
+
+        // Update text elements
+        const percentEl = document.querySelector('[data-key="manaPercent"]');
+        const textEl = document.querySelector('[data-key="manaText"]');
+        const regenEl = document.querySelector('[data-key="manaRegen"]');
+
+        if (percentEl) percentEl.textContent = percentText;
+        if (textEl) textEl.textContent = resourceText;
+        if (regenEl) regenEl.textContent = (regenPerSec && current != total ? `${regenPerSec.toFixed(1)}` : '0')
+    }
+
+
+    const DDRAGON_VERSION = "15.22.1";
+    const DDRAGON_BASE = "https://ddragon.leagueoflegends.com/cdn";
+
+    /**
+     * Sets a background image on an element safely.
+     */
+    function setBackgroundImage(selector, url) {
+        const el = document.querySelector(selector);
+        if (el) {
+            el.style.backgroundImage = `url("${url}")`;
+        }
+    }
+
+    /**
+     * Sets the champion portrait background.
+     * @param {string} champId - e.g. "Aatrox"
+     */
+    function setChampionImage(champId) {
+        if (!champId) return;
+        const url = `${DDRAGON_BASE}/img/champion/tiles/${champId}.jpg`;
+        setBackgroundImage(".champion", url);
+    }
+
+    /**
+     * Sets ability/spell icons.
+     * @param {string} slot - e.g. "Q", "W", "E", "R" or "Summoner1"
+     * @param {string} abilityId - e.g. "AnnieQ" or "SummonerFlash"
+     */
+    function setAbilityImage(slot, abilityId) {
+        if (!abilityId) return;
+        if(!["Q", "W", "E", "R", "D", "F"].includes(slot)) { throw new Error(`Invalid slot: ${slot}. Must be "Q", "W", "E", "R", "Summoner1" or "Summoner2".`); }
+        const url = `${DDRAGON_BASE}/${DDRAGON_VERSION}/img/spell/${abilityId}.png`;
+        setBackgroundImage(`.ability[data-slot="${slot}"]`, url);
+    }
+
+    /**
+     * Sets item icons.
+     * @param {number} index - Item index (0–5)
+     * @param {number|string} itemId - e.g. 6655 for Luden's Tempest
+     */
+    function setItemImage(index, itemId) {
+        if (!itemId) return;
+        if(![0, 1, 2, 3, 4, 5].includes(index)) { throw new Error(`Invalid index: ${index}. Must be 0, 1, 2, 3, 4 or 5.`); }
+        const url = `${DDRAGON_BASE}/${DDRAGON_VERSION}/img/item/${itemId}.png`;
+        setBackgroundImage(`.item-slot[data-key="item-${index}"]`, url);
+    }
+
+    /**
+     * Sets rune icons.
+     * @param {number} index - Rune index (0–2)
+     * @param {number|string} runeId - e.g. 8112 for Electrocute
+     */
+    function setRuneImage(index, runeId) {
+        if (!runeId) return;
+        if(![0, 1, 2].includes(index)) { throw new Error(`Invalid index: ${index}. Must be 0, 1 or 2.`); }
+        const url = `${DDRAGON_BASE}/${DDRAGON_VERSION}/img/perk/${runeId}.png`;
+        setBackgroundImage(`.rune-pill[data-key="rune-${index}"]`, url);
+    }
+
+
+    function setStat(index, data) {
+        if (!data) return;
+        if (!data.name || !data.value) { throw new Error(`Invalid data: ${JSON.stringify(data)}. Must contain both "name" and "value" properties.`); }
+        const el = document.querySelector(`.stat[data-key="championStat-slot-${index}"]`);
+        if (el) {
+            el.querySelector('.k').textContent = data.name;
+            el.querySelector('.v').textContent = data.value;
+        }
+    }
+
+    function setGold(gold) { setText('currentGold', Math.floor(gold)); }
+
+    function setChampionLevel(level) { setText('championLevel', level); }
+    
+    function setAbilityLevel(ability, level) { setText(`ability-${ability}-level`, level); }
+
+
+    // Helper to set text on all spans with given data-key
+    function setText(key, value){
+      document.querySelectorAll('[data-key="'+key+'"]').forEach(el => el.textContent = (value === undefined || value === null) ? '—' : value);
+    }
+
+    // Cooldown timers
+    const cooldownTimers = {};
+    function startCooldown(slot, milliseconds){
+      if(!slot) return;
+      const el = document.querySelector('[data-slot="'+slot+'"]');
+      if(!el) return;
+      const overlay = el.querySelector('.cd-overlay');
+      if(!overlay) return;
+      if(cooldownTimers[slot]) clearInterval(cooldownTimers[slot].interval);
+      let remaining = milliseconds;
+      overlay.style.opacity = '1'; overlay.textContent = (remaining/1000).toFixed(0);
+      const start = Date.now();
+      cooldownTimers[slot] = {};
+      cooldownTimers[slot].interval = setInterval(()=>{
+        const passed = Date.now()-start;
+        let remaining = milliseconds - passed;
+        if(remaining <= 0){ overlay.style.opacity = '0'; overlay.textContent = ''; clearInterval(cooldownTimers[slot].interval); delete cooldownTimers[slot]; }
+        else if(remaining <= 700) {
+          overlay.textContent = (remaining/1000).toFixed(1);
+        } else { overlay.textContent = (remaining/1000).toFixed(0); }
+      }, 100);
+    }
+    
+    function stopCooldown(slot){ if(cooldownTimers[slot]){ clearInterval(cooldownTimers[slot].interval); delete cooldownTimers[slot]; } const el=document.querySelector('[data-slot="'+slot+'"]'); if(el){const overlay=el.querySelector('.cd-overlay'); if(overlay){overlay.style.opacity='0';overlay.textContent='';}} }
+
+    function fmt(n, d=0){ return (typeof n==='number') ? (d? n.toFixed(d) : Math.round(n)) : n; }
+
+    function updateOverlay(datas){
+        /*
+        liveclientdata/allgamedata
+        */
+        if(!datas) { return }
+
+        let Me = getMe(datas)
+        if(!Me) { return }     
+
+        setAbilityImage("Q", datas.activePlayer?.abilities?.["E"]?.["id"] ?? "")
+        setAbilityImage("W", datas.activePlayer?.abilities?.["W"]?.["id"] ?? "")
+        setAbilityImage("E", datas.activePlayer?.abilities?.["Q"]?.["id"] ?? "")
+        setAbilityImage("R", datas.activePlayer?.abilities?.["R"]?.["id"] ?? "")
+        setAbilityImage("D", Me?.summonerSpells?.summonerSpellOne?.rawDisplayName.split("_")?.[2])
+        setAbilityImage("F", Me?.summonerSpells?.summonerSpellTwo?.rawDisplayName.split("_")?.[2])
+
+        setAbilityLevel("Q", datas.activePlayer?.abilities?.["E"]?.abilityLevel ?? 0)
+        setAbilityLevel("W", datas.activePlayer?.abilities?.["W"]?.abilityLevel ?? 0)
+        setAbilityLevel("E", datas.activePlayer?.abilities?.["Q"]?.abilityLevel ?? 0)
+        setAbilityLevel("R", datas.activePlayer?.abilities?.["R"]?.abilityLevel ?? 0)
+
+        let champName = `${Me?.championName.split(" ").join("")}_${Me?.skinID}`
+        setChampionImage(champName)
+        setChampionLevel(datas?.activePlayer?.level)
+
+        updateHealthBar(
+            datas?.activePlayer?.championStats?.currentHealth,
+            datas?.activePlayer?.championStats?.maxHealth,
+            datas?.activePlayer?.championStats?.healthRegenRate
+        )
+        updateResourceBar(
+            datas?.activePlayer?.championStats?.resourceValue,
+            datas?.activePlayer?.championStats?.resourceMax,
+            datas?.activePlayer?.championStats?.resourceRegenRate
+        )
+
+        for(let _i in Me?.items){
+            let i = parseInt(_i)
+            console.log("_i", _i, "i", i)
+            setItemImage(i, Me?.items[i]?.itemID)
+        }
+
+        setGold(datas?.activePlayer?.currentGold ?? 0)
+    }
+
+    function getMe(datas) {
+        if(!datas?.activePlayer?.summonerName) return null
+        return datas.allPlayers.find(p => p.summonerName === datas?.activePlayer?.summonerName)
+    }
+
+
+
+    async function getDatas() {
+        try {
+            const url = "/api/alldata";
+            const timeout = 300;
+            const controller = new AbortController();
+            const signal = controller.signal;
+
+            const headers = new Headers();
+
+            const promise = fetch(url, {
+                signal,
+                headers            })
+                .then(response => {
+                    if (!response.ok) throw new Error("Network response not ok");
+                    return response.json();
+                })
+                .catch(error => {
+                    console.error("Fetch error:", error);
+                    return null;
+                });
+
+            const timeoutPromise = new Promise(resolve => {
+                setTimeout(() => {
+                    controller.abort();
+                    resolve(null);
+                }, timeout);
+            });
+
+            const result = await Promise.race([promise, timeoutPromise]);
+            return result;
+        } catch (e) {
+            console.error("Unexpected error:", e);
+            return null;
+        }
+    }
+
+
+    setInterval(async () => {
+        let datas = await getDatas()
+        updateOverlay(datas)
+
+    }, 100)
+
+  </script>
+</body>
+</html>
