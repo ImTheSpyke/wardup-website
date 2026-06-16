@@ -281,11 +281,11 @@
     console.log("\n\n")
 
 
-    const LATEST_PATCH = "13.1.1"
+    const DDRAGON_BASE = "https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com";
+    let LATEST_PATCH = "13.1.1"
     async function _loadLatestPatch() {
-        LATEST_PATCH = (await (await fetch("https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com/api/versions")).json()).data?.[0]
+        LATEST_PATCH = (await (await fetch(`${DDRAGON_BASE}/api/versions`)).json())?.[0]
     }
-    _loadLatestPatch()
 
     function getWeightOf(name) { return TEMP.championWeights[Object.values(TEMP.championList).find(x => x.name.toLowerCase() == name).key].weight }
 
@@ -580,7 +580,7 @@
 
     async function getAllSkinsOfChampion(champion) {
         // configuration
-        const base = `https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com/${LATEST_PATCH}/img/champion`;
+        const base = `${DDRAGON_BASE}/${LATEST_PATCH}/img/champion`;
         const timeoutMs = 500;
         const maxSkins = 100;
 
@@ -638,13 +638,13 @@
         let champ = TEMP.championList.find(c => c.key === key)
 
         let list = [
-            `https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com/${LATEST_PATCH}/img/champion/centered/${champ.id}_0.jpg`,
+            `${DDRAGON_BASE}/${LATEST_PATCH}/img/champion/centered/${champ.id}_0.jpg`,
         ]
         if(onlyUseCentered.checked == false) {
             list = list.concat([
-                /* `https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com/${LATEST_PATCH}/img/champion/splash/${champ.id}_0.jpg`, */
-                `https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com/${LATEST_PATCH}/img/champion/tiles/${champ.id}_0.jpg`,
-                `https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com/${LATEST_PATCH}/img/champion/loading/${champ.id}_0.jpg`
+                /* `${DDRAGON_BASE}/${LATEST_PATCH}/img/champion/splash/${champ.id}_0.jpg`, */
+                `${DDRAGON_BASE}/${LATEST_PATCH}/img/champion/tiles/${champ.id}_0.jpg`,
+                `${DDRAGON_BASE}/${LATEST_PATCH}/img/champion/loading/${champ.id}_0.jpg`
             ])
         }
 
@@ -660,7 +660,7 @@
     }
 
     async function refreshChampionList() {
-        let championsJSON = (await (await fetch("https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com/${LATEST_PATCH}/${LATEST_PATCH}/data/fr_FR/champion.json")).json()).data
+        let championsJSON = (await (await fetch(`${DDRAGON_BASE}/${LATEST_PATCH}/${LATEST_PATCH}/data/fr_FR/champion.json`)).json()).data
         
         let list = Object.values(championsJSON).map(champion => {
             return {
@@ -677,7 +677,7 @@
         TEMP.championList = list
     }
 
-    refreshChampionList().then(() => {
+    _loadLatestPatch().then(refreshChampionList).then(() => {
          loadRandom();
     })
 

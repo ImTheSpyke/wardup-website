@@ -78,17 +78,19 @@
       championWeights: {}
     };
 
+    const DDRAGON_BASE = "https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com";
+
     async function refreshChampionList() {
-        let latest_version = (await (await fetch("https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com/api/versions")).json()).data?.[0]
-        let championsJSON = (await (await fetch(`https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com/${latest_version}/${latest_version}/data/fr_FR/champion.json`)).json()).data
-        
+        let latest_version = (await (await fetch(`${DDRAGON_BASE}/api/versions`)).json())?.[0]
+        let championsJSON = (await (await fetch(`${DDRAGON_BASE}/${latest_version}/${latest_version}/data/fr_FR/champion.json`)).json()).data
+
         let list = Object.values(championsJSON).map(champion => {
             return {
                 id: champion.id,
                 name: champion.name,
                 key: champion.key,
                 imageUrl: () => {
-                    return `https://p8mxz9.instance.ddragon.riot.cdn.pog-group.com/${latest_version}/img/champion/tiles/${champion.id}_0.jpg`
+                    return `${DDRAGON_BASE}/${latest_version}/img/champion/tiles/${champion.id}_0.jpg`
                 }
             }
         })
